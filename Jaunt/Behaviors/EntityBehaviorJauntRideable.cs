@@ -133,7 +133,7 @@ namespace Jaunt.Behaviors
                     eagent.Controls.Up = controls.Jump && !controls.Sneak && entity.Pos.Y < entity.World.BlockAccessor.MapSizeY - 1;
 
                     JauntGaitMeta currentJauntGait = ebg.CurrentGait as JauntGaitMeta;
-                    float verticalMoveSpeed = Math.Min(0.2f, dt) * GlobalConstants.BaseMoveSpeed * controls.MovespeedMultiplier / 2;
+                    float verticalMoveSpeed = Math.Min(0.2f, dt) * controls.MovespeedMultiplier / 2;
                     ebjg.VerticalSpeed = verticalMoveSpeed * (eagent.Controls.Up ? currentJauntGait?.AscendSpeed ?? 1 : eagent.Controls.Down ? -(currentJauntGait?.DescendSpeed ?? 5) : 0);
 
                     if (eagent.Controls.Down)
