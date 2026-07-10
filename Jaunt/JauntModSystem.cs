@@ -39,15 +39,25 @@ namespace Jaunt
 
             api.RegisterItemClass(ModId + ":iteminstrument", typeof(ItemJauntInstrument));
             api.RegisterEntity(ModId + ":entityflyingagent", typeof(EntityFlyingAgent));
+            api.RegisterEntity(ModId + ":entityjauntagent", typeof(EntityJauntAgent));
             api.RegisterEntityBehaviorClass(ModId + ":gait", typeof(EntityBehaviorJauntGait));
             api.RegisterEntityBehaviorClass(ModId + ":rideable", typeof(EntityBehaviorJauntRideable));
             api.RegisterEntityBehaviorClass(ModId + ":stamina", typeof(EntityBehaviorJauntStamina));
+            api.RegisterEntityBehaviorClass(ModId + ":armor", typeof(EntityBehaviorJauntArmor));
+            api.RegisterEntityBehaviorClass(ModId + ":revivable", typeof(EntityBehaviorJauntRevivable));
+            api.RegisterEntityBehaviorClass(ModId + ":walkspeed", typeof(EntityBehaviorJauntWalkspeed));
+            api.RegisterCollectibleBehaviorClass(ModId + ":attachments", typeof(CollectibleBehaviorJauntAttachments));
 
             api.RegisterItemClass(ModId + ".iteminstrument", typeof(ItemJauntInstrument));
             api.RegisterEntity(ModId + ".entityflyingagent", typeof(EntityFlyingAgent));
+            api.RegisterEntity(ModId + ".entityjauntagent", typeof(EntityJauntAgent));
             api.RegisterEntityBehaviorClass(ModId + ".gait", typeof(EntityBehaviorJauntGait));
             api.RegisterEntityBehaviorClass(ModId + ".rideable", typeof(EntityBehaviorJauntRideable));
             api.RegisterEntityBehaviorClass(ModId + ".stamina", typeof(EntityBehaviorJauntStamina));
+            api.RegisterEntityBehaviorClass(ModId + ".armor", typeof(EntityBehaviorJauntArmor));
+            api.RegisterEntityBehaviorClass(ModId + ".revivable", typeof(EntityBehaviorJauntRevivable));
+            api.RegisterEntityBehaviorClass(ModId + ".walkspeed", typeof(EntityBehaviorJauntWalkspeed));
+            api.RegisterCollectibleBehaviorClass(ModId + ".attachments", typeof(CollectibleBehaviorJauntAttachments));
 
             ReloadConfig();
         }

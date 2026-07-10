@@ -2,7 +2,7 @@
 
 namespace Jaunt.Entities;
 
-public class EntityFlyingAgent : EntityAgent
+public class EntityFlyingAgent : EntityJauntAgent
 {
     public override bool CanStepPitch => false;
     public override bool CanSwivel => true;

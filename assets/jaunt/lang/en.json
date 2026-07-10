@@ -23,5 +23,11 @@
 
   "instrument-descappend-unbound": "Not bound to any particular entity group",
   "instrument-descappend-bound": "Can be used to call {0}",
-  "item-instrument-flute": "Jaunt Flute"
+  "item-instrument-flute": "Jaunt Flute",
+
+  "game:jaunt-percent-protection": "Protection: {0}%",
+  "game:jaunt-walkspeed": "Walkspeed: {0}%",
+
+  "jaunt:armorerror": "Cannot equip Armor while a Blanket is on!",
+  "jaunt:blanketerror": "Cannot equip a Blanket while Armor is on!",
 }
