@@ -24,6 +24,13 @@ namespace Jaunt.Behaviors
 
         protected static JauntModSystem ModSystem => JauntModSystem.Instance;
         protected static string AttributeKey => $"{ModSystem.ModId}:rideable";
+        bool smoothTurning;
+        bool smoothTurningOnGround;
+        bool smoothTurningInFlight;
+        double yawMultiplierEffectiveness;
+        double baseAcceleration;
+        private double smoothedYawDelta;
+
 
         #endregion Properties
 
@@ -56,18 +63,18 @@ namespace Jaunt.Behaviors
 
             return;
         }
-bool smoothFlying;           
-double minResponse;
-double maxResponse;
+
 
         public override void Initialize(EntityProperties properties, JsonObject attributes)
-            {
-                smoothFlying = attributes["smoothFlying"].AsBool(true);
-                minResponse = attributes["smoothFlying"].AsDouble(1f);
-                maxResponse = attributes["smoothFlying"].AsDouble(4f);
+        {
+            smoothTurning = attributes["SmoothTurning"].AsBool(true);
+            smoothTurningOnGround = attributes["smoothTurningConfig"]["onGround"].AsBool(false);
+            smoothTurningInFlight = attributes["smoothTurningConfig"]["inFlight"].AsBool(true);
+            baseAcceleration = attributes["smoothTurningConfig"]["baseAcceleration"].AsDouble(0.1f);
+            yawMultiplierEffectiveness = attributes["smoothTurningConfig"]["yawMultiplierEffectiveness"].AsDouble(5f);
 
-                base.Initialize(properties, attributes);
-            }
+            base.Initialize(properties, attributes);
+        }
 
         #endregion Initialization
 
@@ -166,48 +173,30 @@ double maxResponse;
             BehaviorGait_OnGaitChangedForEnvironment();
         }
 
-    private double smoothedYawDelta;
           override protected void UpdateAngleAndMotion(float dt)
         {
             // Ignore lag spikes
             dt = Math.Min(0.5f, dt);
+        bool IsFlying = eagent.Controls.IsFlying;
 
-        if (smoothFlying && eagent.Controls.IsFlying)
+        if (smoothTurning && ((IsFlying && smoothTurningInFlight) || (!IsFlying && smoothTurningOnGround)))
             {
             double target = SeatsToMotion(GlobalConstants.PhysicsFrameTime);
-            float turnspeed = eagent.GetBehavior<EntityBehaviorGait>().CurrentGait.YawMultiplier;
+            float yawMultiplier = eagent.GetBehavior<EntityBehaviorGait>().CurrentGait.YawMultiplier;
 
-            const double accelModifier = 0.5;
-            const double decelModifier = 1.0;
+            double response = baseAcceleration + ( yawMultiplier * yawMultiplierEffectiveness);
 
-            double response = GameMath.Lerp(minResponse, maxResponse, turnspeed * 2);
-
-            response *= Math.Abs(target) > Math.Abs(smoothedYawDelta)? accelModifier : decelModifier;
             smoothedYawDelta += (target - smoothedYawDelta) * response * dt;
             float yawStep = (float)(smoothedYawDelta * dt * 30f);
 
             entity.Pos.Yaw += yawStep;
             entity.Pos.Yaw %= GameMath.TWOPI;
+            ebg.AngularVelocity = yawStep;
             }
             else
             {
-            float step = GlobalConstants.PhysicsFrameTime;
-            double angularMotion = SeatsToMotion(step);
-
-            if (jumpNow) UpdateRidingState();
-
-            ebg.AngularVelocity = angularMotion;
-
-            entity.Pos.Yaw += (float)angularMotion * dt * 30f;
-            entity.Pos.Yaw = entity.Pos.Yaw % GameMath.TWOPI;
-
-            if (entity.World.ElapsedMilliseconds - lastJumpMs < 2000 && entity.World.ElapsedMilliseconds - lastJumpMs > 200 && entity.OnGround)
-            {
-                eagent.StopAnimation("jump");
-                eagent.AnimManager.AnimationsDirty = true;
-            } 
+                base.UpdateAngleAndMotion(dt);
             }
-
         }
 
         #endregion Motion Systems

@@ -236,8 +236,12 @@ namespace Jaunt.Items
             var aitcto = tm.AllTasks.FirstOrDefault(t => t is AiTaskComeToOwner) as AiTaskComeToOwner;
 
             var distToPlayer = entity.Pos.DistanceTo(byEntity.Pos);
+
+            if (slot.Itemstack.Collectible.Durability != 0)
+            {  
             var damageByDist = (int)Math.Ceiling(distToPlayer / 20);
             slot.Itemstack.Collectible.DamageItem(api.World, byEntity, slot, Math.Max(1, damageByDist));
+            }
 
             if (distToPlayer > aitcto.TeleportMaxRange) // Do nothing outside max teleport range
             {

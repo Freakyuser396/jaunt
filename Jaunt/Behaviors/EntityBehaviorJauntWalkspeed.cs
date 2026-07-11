@@ -19,7 +19,7 @@ namespace Jaunt.Behaviors
 
 
         public EntityBehaviorJauntWalkspeed(Entity entity) : base(entity) { }
-        public override string PropertyName() => "equusdestrier:walkspeed";
+        public override string PropertyName() => "jaunt:walkspeed";
 
          public override void Initialize(EntityProperties properties, JsonObject attributes)
         {

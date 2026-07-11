@@ -12,6 +12,7 @@ using Vintagestory.API.Config;
 using Vintagestory.API.Server;
 using Vintagestory.Client.NoObf;
 using Vintagestory.GameContent;
+using HarmonyLib;
 
 namespace Jaunt
 {
@@ -28,6 +29,8 @@ namespace Jaunt
         public ICoreClientAPI capi { get; private set; }
         public JauntConfig Config { get; private set; }
         public static JauntModSystem Instance { get; private set; }
+
+        public static Harmony HarmonyInstance { get; private set; }
 
         // Debug mode for logging
         internal bool DebugMode => Config.GlobalDebugMode;
@@ -46,6 +49,7 @@ namespace Jaunt
             api.RegisterEntityBehaviorClass(ModId + ":armor", typeof(EntityBehaviorJauntArmor));
             api.RegisterEntityBehaviorClass(ModId + ":revivable", typeof(EntityBehaviorJauntRevivable));
             api.RegisterEntityBehaviorClass(ModId + ":walkspeed", typeof(EntityBehaviorJauntWalkspeed));
+            api.RegisterEntityBehaviorClass(ModId + ":aicontrol", typeof(EntityBehaviorJauntAiControl));
             api.RegisterCollectibleBehaviorClass(ModId + ":attachments", typeof(CollectibleBehaviorJauntAttachments));
 
             api.RegisterItemClass(ModId + ".iteminstrument", typeof(ItemJauntInstrument));
@@ -57,7 +61,11 @@ namespace Jaunt
             api.RegisterEntityBehaviorClass(ModId + ".armor", typeof(EntityBehaviorJauntArmor));
             api.RegisterEntityBehaviorClass(ModId + ".revivable", typeof(EntityBehaviorJauntRevivable));
             api.RegisterEntityBehaviorClass(ModId + ".walkspeed", typeof(EntityBehaviorJauntWalkspeed));
+            api.RegisterEntityBehaviorClass(ModId + ".aicontrol", typeof(EntityBehaviorJauntAiControl));
             api.RegisterCollectibleBehaviorClass(ModId + ".attachments", typeof(CollectibleBehaviorJauntAttachments));
+
+            HarmonyInstance = new Harmony(ModId);
+            HarmonyInstance.PatchAll();
 
             ReloadConfig();
         }

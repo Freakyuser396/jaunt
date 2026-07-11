@@ -38,7 +38,7 @@ namespace Jaunt.Behaviors
             reviveSound = attributes["reviveSound"].AsString("sounds/effect/portal");
                 if (jstack != null)
                     {
-                    jstack.Resolve(entity.Api.World, string.Format("entity {0} equusdestrier revive stack", entity.Code), true);
+                    jstack.Resolve(entity.Api.World, string.Format("entity {0} jaunt revive stack", entity.Code), true);
                     reviveStack = jstack.ResolvedItemstack; 
                     }
             base.Initialize(properties, attributes);

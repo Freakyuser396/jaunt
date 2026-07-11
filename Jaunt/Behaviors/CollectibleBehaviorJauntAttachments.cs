@@ -35,8 +35,8 @@ namespace Jaunt.Behaviors
                     else interactSound = new AssetLocation("game", "sounds/effect/writing1");
 
                 
-                armorerror = Lang.Get("equusdestrier:armorerror");
-                blanketerror = Lang.Get("equusdestrier:blanketerror");    
+                armorerror = Lang.Get("jaunt:armorerror");
+                blanketerror = Lang.Get("jaunt:blanketerror");    
 
             }
         public bool OnTryAttach(ItemSlot itemslot, int slotIndex, Entity toEntity)
