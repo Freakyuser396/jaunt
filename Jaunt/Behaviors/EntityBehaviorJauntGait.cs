@@ -162,7 +162,7 @@ namespace Jaunt.Behaviors
         protected virtual void UpdateClimbAnimation()
         {
             string? nowClimbAnim = null;
-            if (eagent.Controls.IsFlying && !CurrentGait.HasBackwardMotion)
+            if (eagent.Controls.IsFlying && !CurrentGait.HasBackwardMotion && CurrentGait.Code != "hover")
             {
                 if (VerticalSpeed > 0.001)
                 {

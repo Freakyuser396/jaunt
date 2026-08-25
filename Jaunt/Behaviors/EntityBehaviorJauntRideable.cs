@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Vintagestory;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
@@ -30,6 +31,8 @@ namespace Jaunt.Behaviors
         double yawMultiplierEffectiveness;
         double baseAcceleration;
         private double smoothedYawDelta;
+        
+        int landingheight;
 
 
         #endregion Properties
@@ -72,6 +75,7 @@ namespace Jaunt.Behaviors
             smoothTurningInFlight = attributes["smoothTurningConfig"]["inFlight"].AsBool(true);
             baseAcceleration = attributes["smoothTurningConfig"]["baseAcceleration"].AsDouble(0.1f);
             yawMultiplierEffectiveness = attributes["smoothTurningConfig"]["yawMultiplierEffectiveness"].AsDouble(5f);
+            landingheight = attributes["landingheight"].AsInt(2);
 
             base.Initialize(properties, attributes);
         }
@@ -154,11 +158,35 @@ namespace Jaunt.Behaviors
                     JauntGaitMeta currentJauntGait = ebg.CurrentGait as JauntGaitMeta;
                     float verticalMoveSpeed = Math.Min(0.2f, dt) * controls.MovespeedMultiplier / 2;
                     ebjg.VerticalSpeed = verticalMoveSpeed * (eagent.Controls.Up ? currentJauntGait?.AscendSpeed ?? 1 : eagent.Controls.Down ? -(currentJauntGait?.DescendSpeed ?? 5) : 0);
-
                     if (eagent.Controls.Down)
                     {
-                        bool airBelow = entity.World.BlockAccessor.GetBlockBelow(entity.Pos.AsBlockPos).Code == "air";
-                        if (!airBelow) AirToGround();
+                        if (currentJauntGait.Code == "hover")
+                        {
+                        bool airBelowHigh = entity.World.BlockAccessor.GetBlock(entity.Pos.AsBlockPos.DownCopy(landingheight)).Code == "air";
+                        if (!airBelowHigh)
+                        {
+                            AirToGround(); 
+                        }   
+                        else
+                            {                        
+                                bool airBelowLow = entity.World.BlockAccessor.GetBlock(entity.Pos.AsBlockPos.DownCopy(landingheight/2)).Code == "air";
+                                if (!airBelowLow) 
+                                {
+                                AirToGround(); 
+                            }   
+                                else
+                                {                        
+                                    bool airBelow = entity.World.BlockAccessor.GetBlockBelow(entity.Pos.AsBlockPos).Code == "air";
+                                if (!airBelow) AirToGround();
+                                }
+                            }
+                        } 
+                        else
+                                {                        
+                                bool airBelow = entity.World.BlockAccessor.GetBlockBelow(entity.Pos.AsBlockPos).Code == "air";
+                                if (!airBelow) AirToGround();
+                                }
+                            
                     }
                 }
 
