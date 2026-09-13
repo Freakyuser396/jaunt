@@ -33,6 +33,7 @@ namespace Jaunt.Behaviors
         private double smoothedYawDelta;
         
         int landingheight;
+        string landAnimation;
 
 
         #endregion Properties
@@ -76,6 +77,7 @@ namespace Jaunt.Behaviors
             baseAcceleration = attributes["smoothTurningConfig"]["baseAcceleration"].AsDouble(0.1f);
             yawMultiplierEffectiveness = attributes["smoothTurningConfig"]["yawMultiplierEffectiveness"].AsDouble(5f);
             landingheight = attributes["landingheight"].AsInt(2);
+            landAnimation = attributes["landinganimation"].AsString("none");
 
             base.Initialize(properties, attributes);
         }
@@ -158,34 +160,42 @@ namespace Jaunt.Behaviors
                     JauntGaitMeta currentJauntGait = ebg.CurrentGait as JauntGaitMeta;
                     float verticalMoveSpeed = Math.Min(0.2f, dt) * controls.MovespeedMultiplier / 2;
                     ebjg.VerticalSpeed = verticalMoveSpeed * (eagent.Controls.Up ? currentJauntGait?.AscendSpeed ?? 1 : eagent.Controls.Down ? -(currentJauntGait?.DescendSpeed ?? 5) : 0);
+                    var tryAnim = eagent.AnimManager.TryStartAnimation;
+                    var bA = entity.World.BlockAccessor;
                     if (eagent.Controls.Down)
                     {
-                        if (currentJauntGait.Code == "hover")
+                        if (currentJauntGait.Code == "hover" && landAnimation != "none")
                         {
-                        bool airBelowHigh = entity.World.BlockAccessor.GetBlock(entity.Pos.AsBlockPos.DownCopy(landingheight)).Code == "air";
+                        bool airBelowHigh = bA.GetBlock(entity.Pos.AsBlockPos.DownCopy(landingheight)).Code == "air";
                         if (!airBelowHigh)
                         {
-                            AirToGround(); 
+                        AirToGround();
+                        tryAnim(landingAnimation("land",1,true));
                         }   
                         else
                             {                        
-                                bool airBelowLow = entity.World.BlockAccessor.GetBlock(entity.Pos.AsBlockPos.DownCopy(landingheight/2)).Code == "air";
-                                if (!airBelowLow) 
-                                {
-                                AirToGround(); 
+                            bool airBelowLow = bA.GetBlock(entity.Pos.AsBlockPos.DownCopy(landingheight/2)).Code == "air";
+                            if (!airBelowLow) 
+                            {
+                            AirToGround();
+                            tryAnim(landingAnimation("land",2,true));
                             }   
-                                else
-                                {                        
-                                    bool airBelow = entity.World.BlockAccessor.GetBlockBelow(entity.Pos.AsBlockPos).Code == "air";
-                                if (!airBelow) AirToGround();
+                            else
+                            {                        
+                            bool airBelow = bA.GetBlockBelow(entity.Pos.AsBlockPos).Code == "air";
+                            if (!airBelow)
+                                {   
+                                AirToGround();
+                                tryAnim(landingAnimation("land",3,true));
                                 }
+                            }
                             }
                         } 
                         else
-                                {                        
-                                bool airBelow = entity.World.BlockAccessor.GetBlockBelow(entity.Pos.AsBlockPos).Code == "air";
-                                if (!airBelow) AirToGround();
-                                }
+                            {                        
+                            bool airBelow = bA.GetBlockBelow(entity.Pos.AsBlockPos).Code == "air";
+                            if (!airBelow) AirToGround();
+                            }
                             
                     }
                 }
@@ -194,6 +204,32 @@ namespace Jaunt.Behaviors
             }
 
             return angularMotion;
+        }
+
+    AnimationMetaData landingAnimation(string Name, float animSpeed, bool suppDefault)
+        {
+            var anim = entity.Properties.Client.Animations.FirstOrDefault(a => a.Code == landAnimation);
+                if (anim == null)
+                {
+                    return null;
+                }
+
+               var result = new AnimationMetaData()
+                {
+                    Code = anim.Code,
+                    Animation = anim.Animation,
+                    AnimationSounds = anim.AnimationSounds,
+
+                    AnimationSpeed = animSpeed,
+                    SupressDefaultAnimation = suppDefault,
+
+                    Weight = anim.Weight,
+                    BlendMode = anim.BlendMode,
+                    EaseInSpeed = anim.EaseInSpeed,
+                    EaseOutSpeed = anim.EaseOutSpeed,
+                }.Init();
+
+            return result;
         }
 
         public void OnGaitChangedForEnvironment()
