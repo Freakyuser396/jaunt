@@ -56,7 +56,7 @@ namespace Jaunt.Behaviors
         {
             // This is only called server side, don't try and map sneak/jump controls here
 
-            if (action == EnumEntityAction.Sneak && on && (entity.OnGround || entity.Swimming))
+            if (action == EnumEntityAction.Sneak && on && (entity.OnGround || entity.Swimming || eagent.MountedOn != null))
             {
                 if (entity.World.ElapsedMilliseconds - onGroundSinceMs > 500)
                 {
@@ -170,7 +170,7 @@ namespace Jaunt.Behaviors
                         if (!airBelowHigh)
                         {
                         AirToGround();
-                        tryAnim(landingAnimation("land",1,true));
+                        tryAnim(landingAnimation(landAnimation,1,true));
                         }   
                         else
                             {                        
@@ -178,7 +178,7 @@ namespace Jaunt.Behaviors
                             if (!airBelowLow) 
                             {
                             AirToGround();
-                            tryAnim(landingAnimation("land",2,true));
+                            tryAnim(landingAnimation(landAnimation,2,true));
                             }   
                             else
                             {                        
@@ -186,7 +186,7 @@ namespace Jaunt.Behaviors
                             if (!airBelow)
                                 {   
                                 AirToGround();
-                                tryAnim(landingAnimation("land",3,true));
+                                tryAnim(landingAnimation(landAnimation,3,true));
                                 }
                             }
                             }
