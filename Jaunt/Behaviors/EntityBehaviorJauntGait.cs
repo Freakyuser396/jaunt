@@ -51,7 +51,7 @@ namespace Jaunt.Behaviors
                 Gaits[gait.Code] = gait;
                 gait.IconTexture?.WithPathPrefixOnce("textures/");
 
-                if (entity.Api.Side == EnumAppSide.Client) ModSystem.hudIconRenderer.RegisterTexture(gait.IconTexture);
+                if (entity.Api.Side == EnumAppSide.Client && ModSystem.Config.ShowGaitIcon == true) ModSystem.hudIconRenderer.RegisterTexture(gait.IconTexture);
             }
 
             // Shift the idle gait pointers over to those new JauntGaitMeta instances
@@ -179,11 +179,13 @@ namespace Jaunt.Behaviors
                 if (currentClimbAnimation != null)
                 {
                     eagent.StopAnimation(currentClimbAnimation);
+                    eagent.StartAnimation(CurrentGait.Code);
                     eagent.AnimManager.AnimationsDirty = true;
                 }
                 currentClimbAnimation = nowClimbAnim;
                 if (nowClimbAnim != null)
                 {
+                    eagent.StopAnimation(CurrentGait.Code);
                     eagent.StartAnimation(nowClimbAnim);
                 }
             }

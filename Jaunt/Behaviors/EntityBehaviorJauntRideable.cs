@@ -170,7 +170,7 @@ namespace Jaunt.Behaviors
                         if (!airBelowHigh)
                         {
                         AirToGround();
-                        tryAnim(landingAnimation(landAnimation,1,true));
+                        tryAnim(landingAnimation(landAnimation,1,false));
                         }   
                         else
                             {                        
@@ -178,7 +178,7 @@ namespace Jaunt.Behaviors
                             if (!airBelowLow) 
                             {
                             AirToGround();
-                            tryAnim(landingAnimation(landAnimation,2,true));
+                            tryAnim(landingAnimation(landAnimation,2,false));
                             }   
                             else
                             {                        
@@ -186,7 +186,7 @@ namespace Jaunt.Behaviors
                             if (!airBelow)
                                 {   
                                 AirToGround();
-                                tryAnim(landingAnimation(landAnimation,3,true));
+                                tryAnim(landingAnimation(landAnimation,3,false));
                                 }
                             }
                             }
@@ -214,22 +214,10 @@ namespace Jaunt.Behaviors
                     return null;
                 }
 
-               var result = new AnimationMetaData()
-                {
-                    Code = anim.Code,
-                    Animation = anim.Animation,
-                    AnimationSounds = anim.AnimationSounds,
-
-                    AnimationSpeed = animSpeed,
-                    SupressDefaultAnimation = suppDefault,
-
-                    Weight = anim.Weight,
-                    BlendMode = anim.BlendMode,
-                    EaseInSpeed = anim.EaseInSpeed,
-                    EaseOutSpeed = anim.EaseOutSpeed,
-                }.Init();
-
-            return result;
+                var result = anim.Clone();
+                result.AnimationSpeed = animSpeed;
+                result.SupressDefaultAnimation = suppDefault;
+                return result;
         }
 
         public void OnGaitChangedForEnvironment()
