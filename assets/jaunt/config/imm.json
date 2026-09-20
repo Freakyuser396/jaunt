@@ -1,0 +1,183 @@
+{
+	"Configuration": [
+		{
+			"ConfigFile": "jaunt.json",
+			"ConfigLabel": "Global Stamina",
+			"Description": "Server-side multipliers applied by Jaunt's stamina behavior.",
+			"ConfigSource": "ModConfig",
+			"ConfigSide": "Server",
+			"Settings": [
+				{
+					"Type": "Decimal",
+					"Label": "Stamina regeneration multiplier",
+					"Description": "Multiplies stamina regeneration for all entities using Jaunt stamina.",
+					"Map": "GlobalStaminaRegenMultiplier",
+				},
+				{
+					"Type": "Decimal",
+					"Label": "Swimming stamina cost multiplier",
+					"Description": "Multiplies stamina consumed while swimming.",
+					"Map": "GlobalSwimStaminaCostMultiplier",
+				},
+				{
+					"Type": "Decimal",
+					"Label": "Fleeing stamina cost multiplier",
+					"Description": "Multiplies stamina consumed by AI entities while fleeing. This does not affect mounted gait stamina costs.",
+					"Map": "GlobalSprintStaminaCostMultiplier",
+				},
+			],
+		},
+		{
+			"ConfigFile": "jaunt.json",
+			"ConfigLabel": "Default Stamina Behavior",
+			"Description": "Server-side fallback values used when an entity does not define its own.",
+			"ConfigSource": "ModConfig",
+			"ConfigSide": "Server",
+			"Settings": [
+				{
+					"Type": "Decimal",
+					"Label": "Default maximum stamina",
+					"Map": "DefaultMaxStamina",
+				},
+				{
+					"Type": "Decimal",
+					"Label": "Default sprint fatigue",
+					"Map": "DefaultSprintFatigue",
+				},
+				{
+					"Type": "Decimal",
+					"Label": "Default swim fatigue",
+					"Map": "DefaultSwimFatigue",
+				},
+				{
+					"Type": "Decimal",
+					"Label": "Default base fatigue rate",
+					"Map": "DefaultBaseFatigueRate",
+				},
+				{
+					"Type": "Decimal",
+					"Label": "Default stamina regeneration rate",
+					"Map": "DefaultStaminaRegenRate",
+				},
+				{
+					"Type": "Decimal",
+					"Label": "Default wounded regeneration penalty",
+					"Map": "DefaultRegenPenaltyWounded",
+				},
+				{
+					"Type": "Decimal",
+					"Label": "Default mounted regeneration penalty",
+					"Map": "DefaultRegenPenaltyMounted",
+				},
+				{
+					"Type": "Boolean",
+					"Label": "Do not flee when exhausted by default",
+					"Description": "Fallback behavior for whether entities stop fleeing when exhausted. Potentially broken.",
+					"Map": "DefaultDontFleeWhenExhausted",
+				},
+			],
+		},
+		{
+			"ConfigFile": "jaunt.json",
+			"ConfigLabel": "Stamina HUD",
+			"Description": "Local stamina HUD settings.",
+			"ConfigSource": "ModConfig",
+			"ConfigSide": "Client",
+			"Settings": [
+				{
+					"Type": "Boolean",
+					"Label": "Show stamina HUD",
+					"Map": "EnableStamina",
+				},
+				{
+					"Type": "Boolean",
+					"Label": "Hide stamina bar when full",
+					"Map": "HideStaminaOnFull",
+				},
+				{
+					"Type": "Dropdown",
+					"Label": "Stamina bar location",
+					"Map": "StaminaBarLocation",
+					"Options": [
+						{
+							"Label": "Above health",
+							"Value": "AboveHealth",
+						},
+						{
+							"Label": "Above hunger",
+							"Value": "AboveHunger",
+						},
+						{
+							"Label": "Above temporal stability",
+							"Value": "AboveTemporal",
+						},
+					],
+				},
+				{
+					"Type": "Decimal",
+					"Label": "Stamina bar width multiplier",
+					"Description": "Scales the width of the stamina bar relative to Jaunt's default.",
+					"Map": "StaminaBarWidthMultiplier",
+				},
+				{
+					"Type": "Decimal",
+					"Label": "Stamina bar horizontal offset",
+					"Description": "Moves the stamina bar horizontally in GUI-scaled pixels.",
+					"Map": "StaminaBarXOffset",
+				},
+				{
+					"Type": "Decimal",
+					"Label": "Stamina bar vertical offset",
+					"Description": "Moves the stamina bar vertically in GUI-scaled pixels.",
+					"Map": "StaminaBarYOffset",
+				},
+			],
+		},
+		{
+			"ConfigFile": "jaunt.json",
+			"ConfigLabel": "Gait Icon",
+			"Description": "Local gait icon settings.",
+			"ConfigSource": "ModConfig",
+			"ConfigSide": "Client",
+			"Settings": [				
+                {
+					"Type": "Boolean",
+					"Label": "Show Gait Icons",
+					"Map": "ShowGaitIcon",
+				},
+				{
+					"Type": "Decimal",
+					"Label": "Gait icon horizontal offset",
+					"Description": "Moves the gait icon horizontally in GUI-scaled pixels.",
+					"Map": "IconOffsetX",
+				},
+				{
+					"Type": "Decimal",
+					"Label": "Gait icon vertical offset",
+					"Description": "Moves the gait icon vertically in GUI-scaled pixels.",
+					"Map": "IconOffsetY",
+				},
+				{
+					"Type": "Decimal",
+					"Label": "Gait icon size",
+					"Description": "Sets the gait icon size in GUI-scaled pixels.",
+					"Map": "IconSize",
+				},
+			],
+		},
+		{
+			"ConfigFile": "jaunt.json",
+			"ConfigLabel": "Diagnostics",
+			"Description": "Developer-facing server diagnostics.",
+			"ConfigSource": "ModConfig",
+			"ConfigSide": "Server",
+			"Settings": [
+				{
+					"Type": "Boolean",
+					"Label": "Debug mode",
+					"Map": "GlobalDebugMode",
+				},
+			],
+		},
+	],
+}
