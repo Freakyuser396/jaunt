@@ -32,6 +32,7 @@ namespace Jaunt.Behaviors
         public string currentClimbAnimation = null;
 
         public bool EnableDamageHandler = false;
+        public bool stopGaitAnimOnClimb = false;
 
         float timeSinceLastGaitFatigue = 0f;
         protected EntityBehaviorJauntStamina staminaBehavior;
@@ -61,6 +62,7 @@ namespace Jaunt.Behaviors
             }
 
             EnableDamageHandler = attributes["enableDamageHandler"].AsBool();
+            stopGaitAnimOnClimb = attributes["stopGaitAnimOnClimb"].AsBool(false);
         }
 
         public override void AfterInitialized(bool onFirstSpawn)
@@ -179,13 +181,13 @@ namespace Jaunt.Behaviors
                 if (currentClimbAnimation != null)
                 {
                     eagent.StopAnimation(currentClimbAnimation);
-                    eagent.StartAnimation(CurrentGait.Code);
+                    if (stopGaitAnimOnClimb) eagent.StartAnimation(CurrentGait.Code);
                     eagent.AnimManager.AnimationsDirty = true;
                 }
                 currentClimbAnimation = nowClimbAnim;
                 if (nowClimbAnim != null)
                 {
-                    eagent.StopAnimation(CurrentGait.Code);
+                    if (stopGaitAnimOnClimb) eagent.StopAnimation(CurrentGait.Code);
                     eagent.StartAnimation(nowClimbAnim);
                 }
             }
