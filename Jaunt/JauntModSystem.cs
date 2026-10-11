@@ -51,6 +51,7 @@ namespace Jaunt
             api.RegisterEntityBehaviorClass(ModId + ":walkspeed", typeof(EntityBehaviorJauntWalkspeed));
             api.RegisterEntityBehaviorClass(ModId + ":aicontrol", typeof(EntityBehaviorJauntAiControl));
             api.RegisterCollectibleBehaviorClass(ModId + ":attachments", typeof(CollectibleBehaviorJauntAttachments));
+            //api.RegisterEntityBehaviorClass(ModId + ":pettable", typeof(EntityBehaviorJauntPettable));
 
             api.RegisterItemClass(ModId + ".iteminstrument", typeof(ItemJauntInstrument));
             api.RegisterEntity(ModId + ".entityflyingagent", typeof(EntityFlyingAgent));
@@ -63,6 +64,7 @@ namespace Jaunt
             api.RegisterEntityBehaviorClass(ModId + ".walkspeed", typeof(EntityBehaviorJauntWalkspeed));
             api.RegisterEntityBehaviorClass(ModId + ".aicontrol", typeof(EntityBehaviorJauntAiControl));
             api.RegisterCollectibleBehaviorClass(ModId + ".attachments", typeof(CollectibleBehaviorJauntAttachments));
+            //api.RegisterEntityBehaviorClass(ModId + ".pettable", typeof(EntityBehaviorJauntPettable));
 
             HarmonyInstance = new Harmony(ModId);
             HarmonyInstance.PatchAll();
@@ -73,6 +75,7 @@ namespace Jaunt
         public override void StartServerSide(ICoreServerAPI api)
         {
             api.Event.OnEntityLoaded += AddFatigueHandlers;
+				api.RegisterAiTask<AiTaskJauntflyWander>("jaunt:flywander");
         }
 
         public override void StartClientSide(ICoreClientAPI api)
