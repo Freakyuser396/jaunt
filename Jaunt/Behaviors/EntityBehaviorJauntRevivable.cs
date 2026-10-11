@@ -46,7 +46,9 @@ namespace Jaunt.Behaviors
 
         public override void OnInteract(EntityAgent byEntity, ItemSlot itemslot, Vec3d hitPosition, EnumInteractMode mode, ref EnumHandling handled)
         {
-            if (!byEntity.Controls.ShiftKey || (itemslot.Empty && reviveStack != null )) return;
+            if (!byEntity.Controls.ShiftKey) return;
+            if (itemslot.Empty && reviveStack != null ) return;
+            if (!itemslot.Empty && reviveStack == null ) return;
 
             var ebh = entity.GetBehavior<EntityBehaviorHealth>();
             var ebm = entity?.GetBehavior<EntityBehaviorMortallyWoundable>();
