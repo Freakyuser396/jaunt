@@ -47,7 +47,7 @@ namespace Jaunt
         float flyAnimationSpeed = 1f;
 
         //height and distance
-        float desiredflyHeightAboveGround = 10f;
+        float desiredflyHeightAboveGround;
         protected double desiredYPos;
         float wanderDuration;
 
@@ -55,6 +55,15 @@ namespace Jaunt
         float flySpeed = 0.01f;
         float glideSpeed = 0.005f;
         float hoverSpeed = 0.00001f;
+
+        bool landingAnimationStarted;
+        bool isDescending;
+        bool isAscending;
+        bool flyDownAnimationStarted;
+
+        bool flyAnimationStarted;
+        bool flyUpAnimationStarted;
+        
 
 
 
@@ -68,7 +77,7 @@ namespace Jaunt
         public override bool ShouldExecute()
         {
             var flyer = entity as EntityFlyingAgent;
-            if (PreconditionsSatisfied() & flyer.IsInAiFlight == false & entity.OnGround)
+            if (PreconditionsSatisfied() && flyer.IsInAiFlight == false && entity.OnGround)
             {
                 return true;
             }
@@ -79,11 +88,17 @@ namespace Jaunt
         public override void StartExecute()
         {
             base.StartExecute();
-            wanderDuration = 5f;
+            desiredflyHeightAboveGround =10f;
+            wanderDuration =10f;
             var flyer = entity as EntityFlyingAgent;
             flyer.IsInAiFlight = true;
             ReadjustFlyHeight();
-            ModSystem.Logger.Notification("started");
+            landingAnimationStarted = false;
+            isDescending = false;
+            isAscending = true;
+            flyDownAnimationStarted = false;
+            flyAnimationStarted = false;
+            flyUpAnimationStarted = false;
 
         }
 
@@ -96,12 +111,14 @@ namespace Jaunt
             }
 
             wanderDuration -= dt;
-            ModSystem.Logger.Notification("wander duration is: " + wanderDuration);
 
             
 
             double dy = desiredYPos - entity.Pos.Y;
             double yMot = GameMath.Clamp(dy, -1, 1);
+            int groundY = entity.World.BlockAccessor.GetTerrainMapheightAt(entity.Pos.AsBlockPos);
+            double heightAboveGround = entity.Pos.Y - groundY;
+
 
 
             if (entity.World.Rand.NextDouble() < 0.001)
@@ -126,11 +143,45 @@ namespace Jaunt
 
             if (wanderDuration <= 0 )
             {
-                return false;
+                desiredflyHeightAboveGround = 0f;
+                isDescending = true;
+
             }
 
-            if (entity.CollidedHorizontally)
+            if (isAscending && !flyAnimationStarted && desiredflyHeightAboveGround > 0f && dy <= 0.1)
             {
+                entity.StopAnimation("fly-up");
+                entity.StartAnimation("fly");
+                isAscending = false;
+                flyAnimationStarted = true;
+            }
+
+            if (isAscending && !flyUpAnimationStarted)
+            {
+                entity.StartAnimation("fly-up");
+                flyUpAnimationStarted = true;
+            }
+
+            if (isDescending && !flyDownAnimationStarted)
+            {
+                entity.StopAnimation("fly");
+                entity.StopAnimation ("fly-up");
+                entity.StartAnimation("fly-down");
+                flyDownAnimationStarted = true;
+            }
+
+            if (wanderDuration <= 0 && entity.Pos.Y - groundY <= 3 && !landingAnimationStarted)
+            {
+                isDescending = false;
+                entity.StopAnimation ("fly-down");
+                entity.StopAnimation ("fly-up");
+                entity.StartAnimation("land"); // Use the animation's code from the entity JSON.
+                entity.Controls.WalkVector.Set(0, 0, 0);
+                entity.Controls.FlyVector.Set(0, 0, 0);
+                entity.Pos.Motion.X = 0;
+                entity.Pos.Motion.Y = 0;
+                entity.Pos.Motion.Z = 0;
+                landingAnimationStarted = true;
                 return false;
             }
 
@@ -138,7 +189,6 @@ namespace Jaunt
         }
         public override void FinishExecute(bool cancelled)
         {
-            ModSystem.Logger.Notification("finishing task");
             var flyer = entity as EntityFlyingAgent;
             flyer.IsInAiFlight = false;
             base.FinishExecute(cancelled);
@@ -147,7 +197,6 @@ namespace Jaunt
 
         protected void ReadjustFlyHeight()
         {
-            ModSystem.Logger.Notification("readjusting height");
             int terrainYPos = entity.World.BlockAccessor.GetTerrainMapheightAt(entity.Pos.AsBlockPos);
             int tries = 10;
             while (tries-- > 0)
