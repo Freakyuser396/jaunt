@@ -39,22 +39,10 @@ namespace Jaunt
         ICoreClientAPI capi;
         public static JauntModSystem ModSystem => JauntModSystem.Instance;
 
-        //animations
-        string hoverAnimation = "hover";
-        float hoverAnimationSpeed = 1f;
-        string glideAnimation = "glide";
-        float glideAnimationSpeed = 1f;
-        string flyAnimation = "fly";
-        float flyAnimationSpeed = 1f;
 
         //height and distance
         float desiredflyHeightAboveGround;
-        protected double desiredYPos;
         float wanderDuration;
-
-        //movementspeed
-        float flySpeed;
-
 
         bool landingAnimationStarted;
         bool isDescending;
@@ -64,7 +52,16 @@ namespace Jaunt
         bool flyAnimationStarted;
         bool flyUpAnimationStarted;
 
+        bool stayNearSpawn;
+        float radius;
+        float minDistance;
+        protected double desiredYPos;
+        protected float moveSpeed = 0.02f;
+        public Vec3d SpawnPos;
 
+        public Vec3d targetPos;
+
+        float targetTolerangeRange;
 
         private EntityFlyingAgent Flyer => entity as EntityFlyingAgent;
         
@@ -74,13 +71,46 @@ namespace Jaunt
 
         public AiTaskJauntflyWander(EntityAgent entity, JsonObject taskConfig, JsonObject aiConfig) : base(entity, taskConfig, aiConfig)
         {
+            stayNearSpawn = taskConfig["stayNearSpawn"].AsBool(false);
+            radius = taskConfig["radius"].AsFloat(50f);
+            minDistance = taskConfig["minDistance"].AsFloat(50f);
+            moveSpeed = taskConfig["moveSpeed"].AsFloat(0.04f);
+            targetTolerangeRange = taskConfig["targetTolerangeRange"].AsFloat(15f);
             
         }
 
+        public override void OnEntityLoaded()
+        {
+            loadOrCreateSpawnPos();
+        }
+
+        public override void OnEntitySpawn()
+        {
+            loadOrCreateSpawnPos();
+        }
+
+        public void loadOrCreateSpawnPos()
+        {
+            if (entity.WatchedAttributes.HasAttribute("spawnPosX"))
+            {
+                SpawnPos = new Vec3d(
+                    entity.WatchedAttributes.GetDouble("spawnPosX"),
+                    entity.WatchedAttributes.GetDouble("spawnPosY"),
+                    entity.WatchedAttributes.GetDouble("spawnPosZ")
+                );
+            }
+            else
+            {
+                SpawnPos = entity.Pos.XYZ;
+                entity.WatchedAttributes.SetDouble("spawnPosX", SpawnPos.X);
+                entity.WatchedAttributes.SetDouble("spawnPosY", SpawnPos.Y);
+                entity.WatchedAttributes.SetDouble("spawnPosZ", SpawnPos.Z);
+            }
+        }
 
         public override bool ShouldExecute()
         {
-            if (PreconditionsSatisfied() && Flyer.IsInAiFlight == false && entity.OnGround)
+            if (PreconditionsSatisfied() && Flyer.IsInAiFlight == false && entity.OnGround && cooldownUntilMs > entity.World.ElapsedMilliseconds)
             {
                 return true;
             }
@@ -91,8 +121,9 @@ namespace Jaunt
         public override void StartExecute()
         {
             base.StartExecute();
+            moveSpeed = 0.04f;
             desiredflyHeightAboveGround =10f;
-            wanderDuration =10f;
+            wanderDuration =50f;
             Flyer.IsInAiFlight = true;
             ReadjustFlyHeight();
             landingAnimationStarted = false;
@@ -101,7 +132,21 @@ namespace Jaunt
             flyDownAnimationStarted = false;
             flyAnimationStarted = false;
             flyUpAnimationStarted = false;
-            flySpeed = 0.01f;
+
+            var fromPos = stayNearSpawn ? SpawnPos : entity.Pos.XYZ;
+
+            double rndx=0;
+            double rndz=0;
+            for (int i = 0; i < 10; i++)
+            {
+                float yaw = (float)world.Rand.NextDouble() * GameMath.TWOPI;
+                rndx = radius * Math.Sin(yaw);
+                rndz = radius * Math.Cos(yaw);
+
+                if (fromPos.AddCopy(rndx, 0, rndz).HorizontalSquareDistanceTo(entity.Pos.XYZ) > minDistance) break;
+            }
+
+            targetPos = fromPos.AddCopy(rndx, 0, rndz);
 
         }
 
@@ -124,22 +169,25 @@ namespace Jaunt
 
 
 
-            if (entity.World.Rand.NextDouble() < 0.001)
-            {
-                entity.Pos.Motion.Y = 0.02f;
-            }
-            
+            double dx = targetPos.X - entity.Pos.X;
+            double dz = targetPos.Z - entity.Pos.Z;
+
+            float targetYaw = (float)Math.Atan2(dx, dz);
+
+            entity.Pos.Yaw += GameMath.AngleRadDistance(entity.Pos.Yaw, targetYaw) * dt/5;
 
             double cosYaw = Math.Cos(entity.Pos.Yaw);
             double sinYaw = Math.Sin(entity.Pos.Yaw);
+
             entity.Controls.WalkVector.Set(sinYaw, yMot, cosYaw);
-            entity.Controls.WalkVector.Mul(flySpeed);
-            if (yMot < 0) entity.Controls.WalkVector.Mul(0.75);
+            entity.Controls.WalkVector.Mul(moveSpeed);
+
+            if (yMot < 0) entity.Controls.WalkVector.Mul(0.5);
 
             if (entity.Swimming)
             {
-                entity.Controls.WalkVector.Y = 2 * flySpeed;
-                entity.Controls.FlyVector.Y = 2 * flySpeed;
+                entity.Controls.WalkVector.Y = 2 * moveSpeed;
+                entity.Controls.FlyVector.Y = 2 * moveSpeed;
             }
 
 
@@ -148,7 +196,7 @@ namespace Jaunt
             {
                 desiredflyHeightAboveGround = 0f;
                 isDescending = true;
-                flySpeed = 0.005f;
+                moveSpeed = 0.005f;
 
             }
 
@@ -168,7 +216,7 @@ namespace Jaunt
 
             
 
-            if (isDescending && !flyDownAnimationStarted && entity.Pos.Motion.Y <= -0.03)
+            if (isDescending && !flyDownAnimationStarted && entity.Pos.Motion.Y <= -0.01)
             {
                     entity.StopAnimation("fly");
                     entity.StopAnimation ("fly-up");
