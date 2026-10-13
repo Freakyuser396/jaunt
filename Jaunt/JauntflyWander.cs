@@ -26,6 +26,7 @@ using Jaunt.Config;
 using Jaunt.Hud;
 using Jaunt.Systems;
 using Jaunt.Items;
+using System.Diagnostics.Metrics;
 
 
 #nullable disable
@@ -52,9 +53,8 @@ namespace Jaunt
         float wanderDuration;
 
         //movementspeed
-        float flySpeed = 0.01f;
-        float glideSpeed = 0.005f;
-        float hoverSpeed = 0.00001f;
+        float flySpeed;
+
 
         bool landingAnimationStarted;
         bool isDescending;
@@ -63,6 +63,10 @@ namespace Jaunt
 
         bool flyAnimationStarted;
         bool flyUpAnimationStarted;
+
+
+
+        private EntityFlyingAgent Flyer => entity as EntityFlyingAgent;
         
 
 
@@ -76,8 +80,7 @@ namespace Jaunt
 
         public override bool ShouldExecute()
         {
-            var flyer = entity as EntityFlyingAgent;
-            if (PreconditionsSatisfied() && flyer.IsInAiFlight == false && entity.OnGround)
+            if (PreconditionsSatisfied() && Flyer.IsInAiFlight == false && entity.OnGround)
             {
                 return true;
             }
@@ -90,8 +93,7 @@ namespace Jaunt
             base.StartExecute();
             desiredflyHeightAboveGround =10f;
             wanderDuration =10f;
-            var flyer = entity as EntityFlyingAgent;
-            flyer.IsInAiFlight = true;
+            Flyer.IsInAiFlight = true;
             ReadjustFlyHeight();
             landingAnimationStarted = false;
             isDescending = false;
@@ -99,6 +101,7 @@ namespace Jaunt
             flyDownAnimationStarted = false;
             flyAnimationStarted = false;
             flyUpAnimationStarted = false;
+            flySpeed = 0.01f;
 
         }
 
@@ -116,8 +119,8 @@ namespace Jaunt
 
             double dy = desiredYPos - entity.Pos.Y;
             double yMot = GameMath.Clamp(dy, -1, 1);
+            if (isDescending){yMot *= 5;};
             int groundY = entity.World.BlockAccessor.GetTerrainMapheightAt(entity.Pos.AsBlockPos);
-            double heightAboveGround = entity.Pos.Y - groundY;
 
 
 
@@ -145,6 +148,7 @@ namespace Jaunt
             {
                 desiredflyHeightAboveGround = 0f;
                 isDescending = true;
+                flySpeed = 0.005f;
 
             }
 
@@ -162,19 +166,20 @@ namespace Jaunt
                 flyUpAnimationStarted = true;
             }
 
-            if (isDescending && !flyDownAnimationStarted)
+            
+
+            if (isDescending && !flyDownAnimationStarted && entity.Pos.Motion.Y <= -0.03)
             {
-                entity.StopAnimation("fly");
-                entity.StopAnimation ("fly-up");
-                entity.StartAnimation("fly-down");
-                flyDownAnimationStarted = true;
+                    entity.StopAnimation("fly");
+                    entity.StopAnimation ("fly-up");
+                    entity.StartAnimation("fly-down");
+                    flyDownAnimationStarted = true;
             }
 
             if (wanderDuration <= 0 && entity.Pos.Y - groundY <= 3 && !landingAnimationStarted)
             {
                 isDescending = false;
                 entity.StopAnimation ("fly-down");
-                entity.StopAnimation ("fly-up");
                 entity.StartAnimation("land"); // Use the animation's code from the entity JSON.
                 entity.Controls.WalkVector.Set(0, 0, 0);
                 entity.Controls.FlyVector.Set(0, 0, 0);
@@ -189,8 +194,7 @@ namespace Jaunt
         }
         public override void FinishExecute(bool cancelled)
         {
-            var flyer = entity as EntityFlyingAgent;
-            flyer.IsInAiFlight = false;
+            Flyer.IsInAiFlight = false;
             base.FinishExecute(cancelled);
 
         }
