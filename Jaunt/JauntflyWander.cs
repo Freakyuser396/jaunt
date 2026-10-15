@@ -67,8 +67,12 @@ namespace Jaunt
         int targetCount;
         int targetsVisited;
 
+        bool isGliding;
+
         float minTargetInterval = 8f;
         float maxTargetInterval = 15f;
+
+        float targetInterval;
 
 
 
@@ -96,7 +100,7 @@ namespace Jaunt
         {
             base.StartExecute();
             moveSpeed = 0.04f;
-            desiredflyHeightAboveGround =10f;
+            desiredflyHeightAboveGround =20f;
             Flyer.IsInAiFlight = true;
             ReadjustFlyHeight();
             landingAnimationStarted = false;
@@ -105,6 +109,7 @@ namespace Jaunt
             flyDownAnimationStarted = false;
             flyAnimationStarted = false;
             flyUpAnimationStarted = false;
+            isGliding = false;
 
             targetCount = world.Rand.Next(3, 6);
             targetsVisited = 0;
@@ -157,15 +162,32 @@ namespace Jaunt
                 {
                     targetPos = ChooseTarget();
                     targetsVisited++;
-                    targetTimer = RandomTargetInterval();
+                    targetInterval = RandomTargetInterval();
+                    targetTimer = targetInterval;
+
+                    if (isGliding)
+                    {
+                        entity.StopAnimation("glide");
+                        entity.StartAnimation("fly");
+                        isGliding = false;
+                        moveSpeed = 0.04f;
+                    }
                 }
                 else
                 {
                     desiredflyHeightAboveGround = 0f;
                     isDescending = true;
-                    moveSpeed = 0.005f;
+                    moveSpeed = 0.01f;
                 }
             }
+            if ( targetTimer <= targetInterval * 0.2f && !isGliding && !isDescending && !isAscending && desiredflyHeightAboveGround > 0f)
+            {
+                entity.StopAnimation("fly");
+                entity.StartAnimation("glide");
+                isGliding = true;
+                moveSpeed = 0.02f;
+            }
+
 
             if (isAscending && !flyAnimationStarted && desiredflyHeightAboveGround > 0f && dy <= 0.1)
             {
@@ -187,6 +209,21 @@ namespace Jaunt
                 flyUpAnimationStarted = true;
             }
 
+            if (entity.CollidedHorizontally && !landingAnimationStarted)
+            {
+                entity.StopAnimation ("fly");
+                entity.StopAnimation ("fly-up");
+                entity.StopAnimation ("fly-down");
+                entity.StopAnimation ("glide");
+                entity.StartAnimation("land"); 
+                entity.Controls.WalkVector.Set(0, 0, 0);
+                entity.Controls.FlyVector.Set(0, 0, 0);
+                entity.Pos.Motion.X = 0;
+                entity.Pos.Motion.Y = 0;
+                entity.Pos.Motion.Z = 0;
+                landingAnimationStarted = true;
+                return false;   
+            }
             
 
             if (isDescending && !flyDownAnimationStarted && entity.Pos.Motion.Y <= -0.01)
@@ -200,8 +237,11 @@ namespace Jaunt
             if (isDescending && entity.Pos.Y - groundY <= 3 && !landingAnimationStarted)
             {
                 isDescending = false;
+                entity.StopAnimation ("fly");
+                entity.StopAnimation ("fly-up");
                 entity.StopAnimation ("fly-down");
-                entity.StartAnimation("land"); // Use the animation's code from the entity JSON.
+                entity.StopAnimation ("glide");
+                entity.StartAnimation("land"); 
                 entity.Controls.WalkVector.Set(0, 0, 0);
                 entity.Controls.FlyVector.Set(0, 0, 0);
                 entity.Pos.Motion.X = 0;
