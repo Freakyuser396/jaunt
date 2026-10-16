@@ -59,20 +59,20 @@ namespace Jaunt
         protected float moveSpeed = 0.02f;
         public Vec3d SpawnPos;
 
-        public Vec3d targetPos;
+        public Vec3d locationPos;
 
         private EntityFlyingAgent Flyer => entity as EntityFlyingAgent;
         
-        float targetTimer;
-        int targetCount;
-        int targetsVisited;
+        float locationTimer;
+        int locationCount;
+        int locationsVisited;
 
         bool isGliding;
 
-        float minTargetInterval = 8f;
-        float maxTargetInterval = 15f;
+        float minlocationInterval = 8f;
+        float maxlocationInterval = 15f;
 
-        float targetInterval;
+        float locationInterval;
 
 
 
@@ -111,10 +111,10 @@ namespace Jaunt
             flyUpAnimationStarted = false;
             isGliding = false;
 
-            targetCount = world.Rand.Next(3, 6);
-            targetsVisited = 0;
-            targetTimer = RandomTargetInterval();
-            targetPos = ChooseTarget();
+            locationCount = world.Rand.Next(3, 6);
+            locationsVisited = 0;
+            locationTimer = RandomlocationInterval();
+            locationPos = Chooselocation();
 
         }
 
@@ -133,12 +133,12 @@ namespace Jaunt
 
 
 
-            double dx = targetPos.X - entity.Pos.X;
-            double dz = targetPos.Z - entity.Pos.Z;
+            double dx = locationPos.X - entity.Pos.X;
+            double dz = locationPos.Z - entity.Pos.Z;
 
-            float targetYaw = (float)Math.Atan2(dx, dz);
+            float locationYaw = (float)Math.Atan2(dx, dz);
 
-            entity.Pos.Yaw += GameMath.AngleRadDistance(entity.Pos.Yaw, targetYaw) * dt/7;
+            entity.Pos.Yaw += GameMath.AngleRadDistance(entity.Pos.Yaw, locationYaw) * dt/7;
 
             double cosYaw = Math.Cos(entity.Pos.Yaw);
             double sinYaw = Math.Sin(entity.Pos.Yaw);
@@ -154,16 +154,16 @@ namespace Jaunt
                 entity.Controls.FlyVector.Y = 2 * moveSpeed;
             }
 
-            targetTimer -= dt;
+            locationTimer -= dt;
 
-            if (targetTimer <= 0 && !isDescending)
+            if (locationTimer <= 0 && !isDescending)
             {
-                if (targetsVisited < targetCount)
+                if (locationsVisited < locationCount)
                 {
-                    targetPos = ChooseTarget();
-                    targetsVisited++;
-                    targetInterval = RandomTargetInterval();
-                    targetTimer = targetInterval;
+                    locationPos = Chooselocation();
+                    locationsVisited++;
+                    locationInterval = RandomlocationInterval();
+                    locationTimer = locationInterval;
 
                     if (isGliding)
                     {
@@ -180,7 +180,7 @@ namespace Jaunt
                     moveSpeed = 0.01f;
                 }
             }
-            if ( targetTimer <= targetInterval * 0.2f && !isGliding && !isDescending && !isAscending && desiredflyHeightAboveGround > 0f)
+            if ( locationTimer <= locationInterval * 0.2f && !isGliding && !isDescending && !isAscending && desiredflyHeightAboveGround > 0f)
             {
                 entity.StopAnimation("fly");
                 entity.StartAnimation("glide");
@@ -279,13 +279,13 @@ namespace Jaunt
             desiredYPos = terrainYPos + desiredflyHeightAboveGround;
         }
 
-        float RandomTargetInterval()
+        float RandomlocationInterval()
         {
-            return minTargetInterval
-                + (float)world.Rand.NextDouble() * (maxTargetInterval - minTargetInterval);
+            return minlocationInterval
+                + (float)world.Rand.NextDouble() * (maxlocationInterval - minlocationInterval);
         }
 
-        private Vec3d ChooseTarget()
+        private Vec3d Chooselocation()
         {
             var origin = stayNearSpawn ? SpawnPos : entity.Pos.XYZ;
 
