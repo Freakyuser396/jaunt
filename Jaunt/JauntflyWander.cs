@@ -128,7 +128,7 @@ namespace Jaunt
 
             double dy = desiredYPos - entity.Pos.Y;
             double yMot = GameMath.Clamp(dy, -1, 1);
-            if (isDescending){yMot *= 10;};
+            if (isDescending){yMot *= 4;};
             int groundY = entity.World.BlockAccessor.GetTerrainMapheightAt(entity.Pos.AsBlockPos);
 
 
@@ -177,7 +177,6 @@ namespace Jaunt
                 {
                     desiredflyHeightAboveGround = 0f;
                     isDescending = true;
-                    moveSpeed = 0.01f;
                 }
             }
             if ( locationTimer <= locationInterval * 0.2f && !isGliding && !isDescending && !isAscending && desiredflyHeightAboveGround > 0f)
