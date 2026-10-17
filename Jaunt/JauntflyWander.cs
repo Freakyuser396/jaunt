@@ -56,7 +56,8 @@ namespace Jaunt
         float radius;
         float minDistance;
         protected double desiredYPos;
-        protected float moveSpeed = 0.02f;
+        protected float moveSpeed;
+        float currentMoveSpeed;
         public Vec3d SpawnPos;
 
         public Vec3d locationPos;
@@ -65,12 +66,15 @@ namespace Jaunt
         
         float locationTimer;
         int locationCount;
+        float locationCountAvg;
+        float locationCountVar;
+        NatFloat maxLocationCount;
         int locationsVisited;
 
         bool isGliding;
 
-        float minlocationInterval = 8f;
-        float maxlocationInterval = 15f;
+        float minlocationInterval;
+        float maxlocationInterval;
 
         float locationInterval;
 
@@ -82,7 +86,12 @@ namespace Jaunt
             stayNearSpawn = taskConfig["stayNearSpawn"].AsBool(false);
             radius = taskConfig["radius"].AsFloat(50f);
             minDistance = taskConfig["minDistance"].AsFloat(50f);
-            moveSpeed = taskConfig["moveSpeed"].AsFloat(0.04f);
+            moveSpeed = taskConfig["currentMoveSpeed"].AsFloat(0.04f);
+            minlocationInterval = taskConfig["minlocationInterval"].AsFloat(8f);
+            maxlocationInterval = taskConfig["maxlocationInterval"].AsFloat(15f);
+            locationCountAvg = taskConfig["locationCountAvg"].AsFloat(4.5f);
+            locationCountVar = taskConfig["locationCountVar"].AsFloat(1.5f);
+
             
         }
 
@@ -99,7 +108,7 @@ namespace Jaunt
         public override void StartExecute()
         {
             base.StartExecute();
-            moveSpeed = 0.04f;
+            currentMoveSpeed = moveSpeed;
             desiredflyHeightAboveGround =20f;
             Flyer.IsInAiFlight = true;
             ReadjustFlyHeight();
@@ -111,7 +120,8 @@ namespace Jaunt
             flyUpAnimationStarted = false;
             isGliding = false;
 
-            locationCount = world.Rand.Next(3, 6);
+            maxLocationCount = NatFloat.create(EnumDistribution.UNIFORM, locationCountAvg, locationCountVar);
+            locationCount = (int)maxLocationCount.nextFloat();
             locationsVisited = 0;
             locationTimer = RandomlocationInterval();
             locationPos = Chooselocation();
@@ -144,14 +154,14 @@ namespace Jaunt
             double sinYaw = Math.Sin(entity.Pos.Yaw);
 
             entity.Controls.WalkVector.Set(sinYaw, yMot, cosYaw);
-            entity.Controls.WalkVector.Mul(moveSpeed);
+            entity.Controls.WalkVector.Mul(currentMoveSpeed);
 
             if (yMot < 0) entity.Controls.WalkVector.Mul(0.5);
 
             if (entity.Swimming)
             {
-                entity.Controls.WalkVector.Y = 2 * moveSpeed;
-                entity.Controls.FlyVector.Y = 2 * moveSpeed;
+                entity.Controls.WalkVector.Y = 2 * currentMoveSpeed;
+                entity.Controls.FlyVector.Y = 2 * currentMoveSpeed;
             }
 
             locationTimer -= dt;
@@ -170,7 +180,7 @@ namespace Jaunt
                         entity.StopAnimation("glide");
                         entity.StartAnimation("fly");
                         isGliding = false;
-                        moveSpeed = 0.04f;
+                        currentMoveSpeed = moveSpeed;
                     }
                 }
                 else
@@ -184,7 +194,7 @@ namespace Jaunt
                 entity.StopAnimation("fly");
                 entity.StartAnimation("glide");
                 isGliding = true;
-                moveSpeed = 0.02f;
+                currentMoveSpeed = moveSpeed/2;
             }
 
 
@@ -208,7 +218,7 @@ namespace Jaunt
                 flyUpAnimationStarted = true;
             }
 
-            if (entity.CollidedHorizontally && !landingAnimationStarted)
+            if (entity.CollidedHorizontally && entity.Pos.Y - groundY >= 1 && !landingAnimationStarted)
             {
                 entity.StopAnimation ("fly");
                 entity.StopAnimation ("fly-up");
