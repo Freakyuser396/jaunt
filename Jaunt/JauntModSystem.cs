@@ -33,7 +33,7 @@ namespace Jaunt
         public static Harmony HarmonyInstance { get; private set; }
 
         // Debug mode for logging
-        internal bool DebugMode => Config.GlobalDebugMode;
+        internal bool DebugMode => Config?.GlobalDebugMode ?? false;
 
         public override void Start(ICoreAPI api)
         {
@@ -74,8 +74,15 @@ namespace Jaunt
 
         public override void StartServerSide(ICoreServerAPI api)
         {
-            api.Event.OnEntityLoaded += AddFatigueHandlers;
-				api.RegisterAiTask<AiTaskJauntflyWander>("jaunt:flywander");
+			api.Event.OnEntityLoaded += AddFatigueHandlers;
+                api.RegisterAiTask<AiTasks.AiTaskJauntflyWander>("jaunt:flywander");
+				api.RegisterAiTask<AiTasks.AiTaskJauntTakeOff>("jaunt:takeoff");
+				api.RegisterAiTask<AiTasks.AiTaskJauntTakeOffFlee>("jaunt:takeoffflee");
+				api.RegisterAiTask<AiTasks.AiTaskJauntFlyFlee>("jaunt:flyflee");
+				api.RegisterAiTask<AiTasks.AiTaskJauntFlyCircle>("jaunt:flycircle");
+				api.RegisterAiTask<AiTasks.AiTaskJauntFlyDive>("jaunt:flydive");
+				api.RegisterAiTask<AiTasks.AiTaskJauntFlySwoop>("jaunt:flyswoop");
+				api.RegisterAiTask<AiTasks.AiTaskJauntFlyLand>("jaunt:flyland");
         }
 
         public override void StartClientSide(ICoreClientAPI api)
