@@ -52,6 +52,28 @@ namespace Jaunt.Entities
 
             return multiplier;
         }
-        */
+        */	    
+    public EntityJauntAgent()
+    {
+        SimulationRange = 128;
+    }
+	
+	public int RenderRange { get; set; } = 99;
+	public override bool InRangeOf(Vec3d position, float horRangeSq, float vertRange)
+	{
+
+		return base.InRangeOf(position, horRangeSq + extraInteractionRange, vertRange + (extraInteractionRange / 2));
+
+	}
+	public float extraInteractionRange = 64;
+
+    public override void Initialize(EntityProperties properties, ICoreAPI api, long InChunkIndex3d)
+	{
+		SimulationRange = properties.Attributes["SimulationRange"].AsInt(256); //default 128
+		RenderRange = properties.Attributes["RenderRange"].AsInt(256); //default 99
+		extraInteractionRange = properties.Attributes["extraInteractionRange"].AsInt(128);
+		base.Initialize(properties, api, InChunkIndex3d);
+
+	}
     }
 }

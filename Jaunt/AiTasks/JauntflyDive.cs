@@ -53,8 +53,10 @@ namespace Jaunt.AiTasks
 		Vec3d lastProgressPos = new Vec3d();
 
 		string diveAnimation;
+		string liftAnimation;
 		string hoverAnimation;
 		string diveSound;
+		double extraHeightAboveTarget;
 
 		Vec3d targetPos;
 		Vec3d finalTargetPos = new Vec3d();
@@ -70,8 +72,10 @@ namespace Jaunt.AiTasks
 			failedDiveCooldownMs = taskConfig["failedDiveCooldownMs"].AsInt(5000);
 			requireLineOfSight = taskConfig["requireLineOfSight"].AsBool(true);
 			diveAnimation = taskConfig["diveAnimation"].AsString("fly-down");
+			liftAnimation = taskConfig["liftAnimation"].AsString("fly-up");
 			hoverAnimation = taskConfig["hoverAnimation"].AsString("hover");
 			diveSound = taskConfig["diveSound"].AsString("game:sounds/creature/erel/dive");
+			extraHeightAboveTarget = taskConfig["extraHeightAboveTarget"].AsDouble(1);
 		}
 
 		public override bool ShouldExecute()
@@ -122,7 +126,13 @@ namespace Jaunt.AiTasks
 			lastProgressMs = diveStartMs;
 			lastProgressPos.Set(entity.Pos.XYZ);
 
+			if (targetEntity.Pos.Y > entity.Pos.Y)
+				{
+				diveAnimation = liftAnimation;
+				}
+
 			Flyer.SetAiFlightAnimation(diveAnimation);
+
 			PlaySound(diveSound);
 
 			DebugLog($"[FlightDebug] Dive: Diving toward {targetEntity?.Code} (id {targetEntity?.EntityId}).");
@@ -147,8 +157,16 @@ namespace Jaunt.AiTasks
 
 			Vec3d aimPos = finalApproach ? finalTargetPos : targetPos;
 
-			int groundAtAim = entity.World.BlockAccessor.GetTerrainMapheightAt(aimPos.AsBlockPos);
-			double impactY = groundAtAim + ImpactHeightAboveTerrain;
+			double impactY = 0;
+			if (targetEntity != null)
+			{
+				impactY = targetEntity.Pos.Y + ImpactHeightAboveTerrain;
+			}
+			else 
+			{
+				int groundAtAim = entity.World.BlockAccessor.GetTerrainMapheightAt(aimPos.AsBlockPos);
+				impactY = groundAtAim + ImpactHeightAboveTerrain;
+			}
 
 			double dx = aimPos.X - entity.Pos.X;
 			double dz = aimPos.Z - entity.Pos.Z;
@@ -342,7 +360,7 @@ namespace Jaunt.AiTasks
 				return;
 			}
 
-			targetPos.Set(targetEntity.Pos.X, targetEntity.Pos.Y, targetEntity.Pos.Z);
+			targetPos.Set(targetEntity.Pos.X, targetEntity.Pos.Y + extraHeightAboveTarget, targetEntity.Pos.Z);
 		}
 
 		private void PlaySound(string location)

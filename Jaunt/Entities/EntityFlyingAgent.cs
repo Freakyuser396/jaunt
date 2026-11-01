@@ -24,12 +24,6 @@ public class EntityFlyingAgent : EntityJauntAgent
 	public override bool CanSwivel => true;
 	public override bool CanSwivelNow => true;
 	public override double FrustumSphereRadius => base.FrustumSphereRadius * 5;
-	public override bool InRangeOf(Vec3d position, float horRangeSq, float vertRange)
-	{
-
-		return base.InRangeOf(position, horRangeSq + 128, vertRange);
-
-	}
 
 	public bool IsInAiFlight = false;
 		public override bool ApplyGravity
@@ -61,7 +55,6 @@ public class EntityFlyingAgent : EntityJauntAgent
 	// public float maxFlyingHealthInPercent;
 	public override void Initialize(EntityProperties properties, ICoreAPI api, long InChunkIndex3d)
 	{
-		// maxFlyingHealthInPercent = properties.Attributes["maxFlyingHealthInPercent"].AsFloat(99f);
 		base.Initialize(properties, api, InChunkIndex3d);
 
 	}
