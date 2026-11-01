@@ -30,6 +30,7 @@ namespace Jaunt.AiTasks
 		int minAirActivitiesBeforeLanding;
 		int maxAirActivitiesBeforeLanding;
 		protected double desiredYPos;
+		bool isForced;
 
 		bool flyDownAnimationStarted;
 
@@ -56,8 +57,9 @@ namespace Jaunt.AiTasks
 			descendAnimation = taskConfig["descendAnimation"].AsString("fly-down");
 			landingAnimation = taskConfig["landingAnimation"].AsString("land");
 			landingSound = taskConfig["landingSound"].AsString("game:sounds/creature/erel/slam");
+			isForced = taskConfig["forced"].AsBool(false);
 
-			if (taskConfig["rejectedMaterials"] != null)
+			if (taskConfig["rejectedMaterials"] != null && !isForced)
 			{
 				foreach (var materialJson in taskConfig["rejectedMaterials"].AsArray())
 				{

@@ -1,4 +1,6 @@
-﻿using Vintagestory;
+﻿using System;
+using Jaunt.AiTasks;
+using Vintagestory;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
@@ -55,6 +57,15 @@ public class EntityFlyingAgent : EntityJauntAgent
 	public string CurrentAiFlightAnimation { get; private set; }
 
 	public bool AirborneActivityBudgetReached => AirborneActivitiesBeforeLanding > 0 && AirborneActivitiesCompleted >= AirborneActivitiesBeforeLanding;
+
+	// public float maxFlyingHealthInPercent;
+	public override void Initialize(EntityProperties properties, ICoreAPI api, long InChunkIndex3d)
+	{
+		// maxFlyingHealthInPercent = properties.Attributes["maxFlyingHealthInPercent"].AsFloat(99f);
+		base.Initialize(properties, api, InChunkIndex3d);
+
+	}
+
 
 
 	public void RequestTakeoff()
@@ -239,7 +250,6 @@ public class EntityFlyingAgent : EntityJauntAgent
 
 		return true;
 	}
-
 	public override void OnEntitySpawn()
 	{
 		base.OnEntitySpawn();
