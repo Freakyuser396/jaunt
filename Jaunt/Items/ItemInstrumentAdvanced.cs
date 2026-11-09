@@ -1,0 +1,322 @@
+﻿
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using Jaunt.Behaviors;
+using Vintagestory.API.Client;
+using Vintagestory.API.Common;
+using Vintagestory.API.Common.Entities;
+using Vintagestory.API.Config;
+using Vintagestory.API.MathTools;
+using Vintagestory.GameContent;
+
+#nullable disable
+
+namespace Jaunt.Items
+{
+    public class ItemJauntInstrumentAdvanced : Item
+    {
+        protected static JauntModSystem ModSystem => JauntModSystem.Instance;
+        SkillItem[] modes;
+        private ICoreClientAPI capi;
+        private bool isLocked;
+        private string lockedGroupCode;
+        private string[] disallowedBindings;
+        private AssetLocation callSound;
+        public override void OnLoaded(ICoreAPI api)
+        {
+            base.OnLoaded(api);
+
+            lockedGroupCode = Attributes["groupCode"].AsString();
+            isLocked = !string.IsNullOrEmpty(lockedGroupCode);
+
+            disallowedBindings = Attributes["disallowedBindings"].AsObject<string[]>(new string[0]);
+
+            var soundLoc = Attributes["callSound"].AsString() ?? "game:sounds/instrument/elkcall";
+            callSound = new AssetLocation(soundLoc).WithPathPrefixOnce("sounds/");
+
+            capi = api as ICoreClientAPI;
+
+            List<SkillItem> toolModes = new List<SkillItem>()
+            {
+                new()
+                {
+                    Code = new AssetLocation("play"),
+                    Name = Lang.Get("jaunt:instrument-skill-play")
+                }
+            };
+            {
+                toolModes.Add(new SkillItem
+                {
+                    Code = new AssetLocation("stay"),
+                    Name = Lang.Get("jaunt:instrument-skill-stay")
+                });
+            };
+            // If not locked to an entity group in item json add the bind toolmode
+            if (!isLocked)
+            {
+                toolModes.Add(new SkillItem
+                {
+                    Code = new AssetLocation("bind"),
+                    Name = Lang.Get("jaunt:instrument-skill-bind")
+                });
+            };
+
+            modes = toolModes.ToArray();
+
+            if (capi != null)
+            {
+                modes[0].WithIcon(capi, capi.Gui.LoadSvgWithPadding(
+                    new AssetLocation("jaunt:textures/icons/instrument-play.svg"), 48, 48, 5, ColorUtil.WhiteArgb));
+                modes[0].TexturePremultipliedAlpha = false;
+
+                //move/stay/follow toolmode
+                    modes[1].WithIcon(capi, capi.Gui.LoadSvgWithPadding(
+                        new AssetLocation("jaunt:textures/icons/instrument-bind.svg"), 48, 48, 5, ColorUtil.WhiteArgb));
+                    modes[1].TexturePremultipliedAlpha = false;
+
+                // Bind toolmode
+                if (!isLocked)
+                {
+                    modes[2].WithIcon(capi, capi.Gui.LoadSvgWithPadding(
+                        new AssetLocation("jaunt:textures/icons/instrument-bind.svg"), 48, 48, 5, ColorUtil.WhiteArgb));
+                    modes[2].TexturePremultipliedAlpha = false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Called by the inventory system when you hover over an item stack. This is the item stack name that is getting displayed.
+        /// </summary>
+        /// <param name="itemStack"></param>
+        /// <returns></returns>
+        public override string GetHeldItemName(ItemStack itemStack)
+        {
+            TextInfo textInfo = CultureInfo.CurrentCulture.TextInfo;
+            if (Code == null) return "Invalid block, id " + this.Id;
+
+            // If the item is locked to an entity group in the item json, set the group code to the entity group
+            if (isLocked && string.IsNullOrEmpty(itemStack.Attributes.GetString("groupCode"))) SetBoundEntityType(lockedGroupCode, itemStack);
+
+            var groupCode = itemStack.Attributes.GetString("groupCode");
+
+            string type = ItemClass.Name();
+            StringBuilder sb = new StringBuilder();
+            sb.Append(Lang.GetMatching(Code?.Domain + AssetLocation.LocationSeparator + type + "-" + Code?.Path));
+            string displayCode;
+            if (string.IsNullOrEmpty(groupCode))
+            {
+                displayCode = Lang.Get($"jaunt:groupcode-unbound");
+            }
+            else
+            {
+                displayCode = textInfo.ToTitleCase(groupCode);
+            }
+
+            sb.Append(" (" + displayCode + ")");
+
+            foreach (var bh in CollectibleBehaviors)
+            {
+                bh.GetHeldItemName(sb, itemStack);
+            }
+
+            return sb.ToString();
+        }
+
+        public override void GetHeldItemInfo(ItemSlot inSlot, StringBuilder dsc, IWorldAccessor world, bool withDebugInfo)
+        {
+            var groupCode = inSlot.Itemstack.Attributes.GetString("groupCode");
+            base.GetHeldItemInfo(inSlot, dsc, world, withDebugInfo);
+            if (string.IsNullOrEmpty(groupCode))
+            {
+                groupCode = Lang.Get($"jaunt:groupcode-unbound").ToLower();
+                dsc.AppendLine("\n" + Lang.Get($"jaunt:instrument-descappend-unbound"));
+            }
+            else
+            {
+                dsc.AppendLine("\n" + Lang.Get($"jaunt:instrument-descappend-bound", groupCode));
+            }
+        }
+
+        public override void OnHeldInteractStart(ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, bool firstEvent, ref EnumHandHandling handling)
+        {
+            int playmode = slot.Itemstack.Attributes.GetInt("toolMode");
+
+            if (playmode == 0)
+            {
+                var ela = api.World.ElapsedMilliseconds;
+                var prevela = slot.Itemstack.Attributes.GetLong("lastPlayerMs", -99999);
+
+                // User must have restarted his game world, allow call
+                if (prevela > ela)
+                {
+                    prevela = ela-4001;
+                }
+                if (ela - prevela <= 4000) return;
+                
+
+                slot.Itemstack.Attributes.SetLong("lastPlayerMs", ela);
+                api.World.PlaySoundAt(callSound, byEntity, (byEntity as EntityPlayer)?.Player, 0.75f, 32, 0.5f);
+
+                if (api.Side == EnumAppSide.Server)
+                {
+                    var groupCode = slot.Itemstack.Attributes.GetString("groupCode", "");
+                    if (TryGetOwnedEntity(byEntity, groupCode, out var entity))
+                    {
+                        callEntity(entity, slot, byEntity);
+                    }
+                }
+            }
+            else if (playmode == 1)
+            {
+                api.World.PlaySoundAt(callSound, byEntity, (byEntity as EntityPlayer)?.Player, 0.75f, 32, 0.5f);
+
+                if (api.Side == EnumAppSide.Server)
+                {
+                    var groupCode = slot.Itemstack.Attributes.GetString("groupCode", "");
+                    if (TryGetOwnedEntity(byEntity, groupCode, out var entity))
+                    {
+                        ToggleEntityMovement(entity, slot, byEntity);
+                    }
+                }
+            }
+            else if (playmode == 2)
+            {
+                if (entitySel is null || entitySel.Entity is null)
+                {
+                    capi.TriggerIngameError(this, "no-entity-selected", Lang.Get("jaunt:ingame-error-no-entitysel"));
+                    return;
+                }
+                bool bound = SetBoundEntityType(slot, entitySel.Entity);
+
+                //Automatically toggle to play mode after binding to prevent accidental rebinding
+                if (bound) slot.Itemstack.Attributes.SetInt("toolMode", 0);
+            }
+
+            handling = EnumHandHandling.PreventDefault;
+        }
+
+        public override SkillItem[] GetToolModes(ItemSlot slot, IClientPlayer forPlayer, BlockSelection blockSel)
+        {
+            return modes;
+        }
+
+        public override void SetToolMode(ItemSlot slot, IPlayer byPlayer, BlockSelection blockSelection, int toolMode)
+        {
+            slot.Itemstack.Attributes.SetInt("toolMode", toolMode);
+        }
+
+        public override int GetToolMode(ItemSlot slot, IPlayer byPlayer, BlockSelection blockSelection)
+        {
+            return slot.Itemstack.Attributes.GetInt("toolMode");
+        }
+
+        public void SetBoundEntityType(string groupCode, ItemStack itemStack)
+        {
+            if (string.IsNullOrEmpty(groupCode)) return;
+            itemStack.Attributes.SetString("groupCode", groupCode);
+        }
+
+        public bool SetBoundEntityType(ItemSlot slot, Entity entity)
+        {
+            TextInfo textInfo = CultureInfo.CurrentCulture.TextInfo;
+            var groupCode = entity.GetBehavior<EntityBehaviorOwnable>()?.Group;
+            if (string.IsNullOrEmpty(groupCode)) return false;
+
+            var displayCode = textInfo.ToTitleCase(groupCode);
+
+            if (disallowedBindings.Contains(groupCode))
+            {
+                capi?.TriggerIngameError(this, "disallowed-entity", Lang.Get($"jaunt:ingame-error-disallowed-entity", groupCode));
+                return false;
+            }
+
+            slot.Itemstack.Attributes.SetString("groupCode", groupCode);
+
+            capi?.TriggerIngameDiscovery(this, "bound-groupcode", Lang.Get("jaunt:discovery-bound-entity", displayCode));
+            return true;
+        }
+
+        private bool TryGetOwnedEntity(EntityAgent byEntity, string groupCode, out Entity entity)
+        {
+            entity = null;
+
+            if (api.Side != EnumAppSide.Server) return false;
+
+            var player = (byEntity as EntityPlayer)?.Player;
+            if (player == null || string.IsNullOrEmpty(groupCode)) return false;
+
+            var mseo = api.ModLoader.GetModSystem<ModSystemEntityOwnership>();
+            if (mseo?.OwnerShipsByPlayerUid == null) return false;
+
+            if (!mseo.OwnerShipsByPlayerUid.TryGetValue(player.PlayerUID, out var ownerships) || ownerships == null || !ownerships.TryGetValue(groupCode, out var ownership))
+            {
+                return false;
+            }
+
+            entity = api.World.GetEntityById(ownership.EntityId);
+            return entity != null;
+        }
+
+        private void callEntity(Entity entity, ItemSlot slot, EntityAgent byEntity)
+        {
+            var plr = (byEntity as EntityPlayer).Player;
+
+            var mw = entity.GetBehavior<EntityBehaviorMortallyWoundable>();
+            if (mw?.HealthState == EnumEntityHealthState.MortallyWounded || mw?.HealthState == EnumEntityHealthState.Dead)
+            {
+                return;
+            }
+
+            var tm = entity.GetBehavior<EntityBehaviorTaskAI>().TaskManager;
+            var aitcto = tm.AllTasks.FirstOrDefault(t => t is AiTaskComeToOwner) as AiTaskComeToOwner;
+
+            var distToPlayer = entity.Pos.DistanceTo(byEntity.Pos);
+
+            if (slot.Itemstack.Collectible.Durability != 0)
+            {
+                var damageByDist = (int)Math.Ceiling(distToPlayer / 20);
+                slot.Itemstack.Collectible.DamageItem(api.World, byEntity, slot, Math.Max(1, damageByDist));
+            }
+
+            if (distToPlayer > aitcto.TeleportMaxRange) // Do nothing outside max teleport range
+            {
+                return;
+            }
+
+            var mount = entity?.GetInterface<IMountable>();
+            if (mount != null)
+            {
+                if (mount.IsMountedBy(plr.Entity)) return;
+                if (mount.AnyMounted())
+                {
+                    entity.GetBehavior<EntityBehaviorRideable>()?.UnmountPassengers(); // You are not my owner, get lost!
+                }
+            }
+
+            entity.AlwaysActive = true;
+            entity.State = EnumEntityState.Active;
+            entity.GetBehavior<EntityBehaviorJauntAiControl>()?.SetState(EntityBehaviorJauntAiControl.JauntAiState.Follow);
+            aitcto.allowTeleportCount=1;
+            tm.StopTasks();
+            tm.ExecuteTask(aitcto, 0);
+        }
+
+        private void ToggleEntityMovement(Entity entity, ItemSlot slot, EntityAgent byEntity)
+        {
+            if (api.Side != EnumAppSide.Server) return;
+
+            var jai = entity.GetBehavior<EntityBehaviorJauntAiControl>();
+            if (jai == null) return;
+
+            jai.CycleState();
+
+            if (jai.CurrentState == EntityBehaviorJauntAiControl.JauntAiState.Follow)
+            {
+                callEntity(entity, slot, byEntity);
+            }
+        }
+    }
+}

@@ -40,6 +40,8 @@ namespace Jaunt.Behaviors
         {
             hitchingEntityCode = attributes["hitchingEntityCode"].AsString() ?? "hitchingpost";
             canWanderIndoors = attributes["wanderIndoors"].AsBool();
+            eatDelayAfterDismount = attributes["eatDelayAfterDismount"].AsInt(4);
+            wanderDelayAfterDismount = attributes["wanderDelayAfterDismount"].AsInt(24);
             base.Initialize(properties, attributes);
         }
         public override void AfterInitialized(bool onFirstSpawn)
@@ -58,7 +60,35 @@ namespace Jaunt.Behaviors
         public float checkPostTimer;
         public float checkSkyTimer;
         string hitchingEntityCode;
+        int eatDelayAfterDismount;
+        int wanderDelayAfterDismount;
+        public enum JauntAiState
+        {
+            Active = 0,
+            Follow = 1,
+            Stay = 2,
+        }
 
+        public JauntAiState CurrentState
+        {
+            get => (JauntAiState)entity.WatchedAttributes.GetInt("jauntAiState");
+            private set => entity.WatchedAttributes.SetInt("jauntAiState", (int)value);
+        }
+        public void SetState(JauntAiState state)
+            {
+                if (entity.World.Side != EnumAppSide.Server) return;
+
+                CurrentState = state;
+
+                if (state != JauntAiState.Follow)
+                {
+                    StopAiTasks();
+                }
+            }
+            public void CycleState()
+            {
+                SetState((JauntAiState)(((int)CurrentState + 1) % 3));
+            }
         public override void OnGameTick(float dt)
         {
             checkSkyTimer += dt;
@@ -116,16 +146,23 @@ namespace Jaunt.Behaviors
         }
         private bool TaskManager_OnShouldExecuteTask(IAiTask t)
         {
+        if (t is AiTaskComeToOwner)
+            {
+                if (CurrentState == JauntAiState.Follow) return true;
+            }
+
+        if (CurrentState != JauntAiState.Active) return false;
+
         if (t is AiTaskWander)
             {
                 if (hitchingPostNear) return false;
                 if (!canseesky && !canWanderIndoors) return false;
-                if (RecentlyDismounted(24)) return false;
+                if (RecentlyDismounted(wanderDelayAfterDismount)) return false;
             }
         if (t is AiTaskSeekFoodAndEat)
             {
                 if (hitchingPostNear) return false;
-                if (RecentlyDismounted(4)) return false;
+                if (RecentlyDismounted(eatDelayAfterDismount)) return false;
             }
             return true;
         }
@@ -133,11 +170,32 @@ namespace Jaunt.Behaviors
         {
             return this.entity.World.Calendar.TotalHours - this.entity.WatchedAttributes.GetDouble("lastDismountTotalHours") < hours;
         }
-        void StopAiTasks()
+        public void StopAiTasks()
         {
             AiTaskManager tm = this.entity.GetBehavior<EntityBehaviorTaskAI>()?.TaskManager;    
             if (tm == null) return;
             tm.StopTasks();
+        }        
+        
+        public override void GetInfoText(StringBuilder infotext)
+        {
+            if (entity.Api is not ICoreClientAPI) return;
+
+            // infotext.AppendLine("jaunt:infotext-ai-state: " + CurrentState);
+
+            double timeSinceDismount = entity.World.Calendar.TotalHours - entity.WatchedAttributes.GetDouble("lastDismountTotalHours");
+
+            if (timeSinceDismount < eatDelayAfterDismount)
+                {
+                double remaining = eatDelayAfterDismount - timeSinceDismount;
+                infotext.AppendLine("jaunt:infotext-foodseektimer:" + " " + remaining.ToString("0.0") + " hours");   
+                }
+                
+            if (timeSinceDismount < wanderDelayAfterDismount)
+                {
+                double remaining = wanderDelayAfterDismount - timeSinceDismount;
+                infotext.AppendLine("jaunt:infotext-wandertimer:" + " " + remaining.ToString("0.0") + " hours");   
+                }
         }
-        }
+    }
 }

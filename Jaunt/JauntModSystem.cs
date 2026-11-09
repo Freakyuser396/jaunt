@@ -83,6 +83,7 @@ namespace Jaunt
 				api.RegisterAiTask<AiTasks.AiTaskJauntFlyDive>("jaunt:flydive");
 				api.RegisterAiTask<AiTasks.AiTaskJauntFlySwoop>("jaunt:flyswoop");
 				api.RegisterAiTask<AiTasks.AiTaskJauntFlyLand>("jaunt:flyland");
+				api.RegisterAiTask<AiTasks.AiTaskJauntComeToOwner>("jaunt:cometoowner");
         }
 
         public override void StartClientSide(ICoreClientAPI api)

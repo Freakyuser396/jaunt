@@ -22,6 +22,7 @@ namespace Jaunt.Behaviors
         public bool CanFlyRidden => RideableGaitOrder.ContainsKey(EnumHabitat.Air);
 
         protected long onGroundSinceMs;
+        long JauntlastJumpMs;
 
         protected static JauntModSystem ModSystem => JauntModSystem.Instance;
         protected static string AttributeKey => $"{ModSystem.ModId}:rideable";
@@ -34,7 +35,18 @@ namespace Jaunt.Behaviors
         
         int landingheight;
         string landAnimation;
-
+        bool customJump = true;
+        bool variableJump = true;
+        double jumpStrength;
+        private bool pendingCustomJump;
+        double jumpCharge;
+        double lastJumpCharge;
+        double maxCharge;
+        float baseJumpAnimSpeed;
+        float currentJumpSpeed;
+        float maxJumpAnimSlowdown;
+        float baseJumpCooldown;
+        float JumpCooldownModifier;
 
         #endregion Properties
 
@@ -76,6 +88,16 @@ namespace Jaunt.Behaviors
             smoothTurningInFlight = attributes["smoothTurningConfig"]["inFlight"].AsBool(true);
             baseAcceleration = attributes["smoothTurningConfig"]["baseAcceleration"].AsDouble(0.1f);
             yawMultiplierEffectiveness = attributes["smoothTurningConfig"]["yawMultiplierEffectiveness"].AsDouble(5f);
+
+            customJump = attributes["JumpConfig"]["customJump"].AsBool(true);
+            jumpStrength = attributes["JumpConfig"]["jumpStrength"].AsDouble(0.12f);
+            variableJump = attributes["JumpConfig"]["variableJump"].AsBool(true);
+            maxCharge = attributes["JumpConfig"]["maxCharge"].AsDouble(300);
+            baseJumpAnimSpeed = attributes["JumpConfig"]["baseJumpAnimSpeed"].AsFloat(1.4f);
+            maxJumpAnimSlowdown = attributes["JumpConfig"]["maxJumpAnimSlowdown"].AsFloat(50f) / 100;
+            baseJumpCooldown = attributes["JumpConfig"]["baseJumpCooldown"].AsFloat(1000f);
+            JumpCooldownModifier = attributes["JumpConfig"]["JumpCooldownModifier"].AsFloat(1f);
+
             landingheight = attributes["landingheight"].AsInt(2);
             landAnimation = attributes["landinganimation"].AsString("none");
 
@@ -102,6 +124,7 @@ namespace Jaunt.Behaviors
 
         public override double SeatsToMotion(float dt)
         {
+            JauntGaitMeta currentJauntGait = ebg.CurrentGait as JauntGaitMeta;
             double angularMotion = base.SeatsToMotion(dt);
 
             foreach (var seat in Seats)
@@ -137,16 +160,37 @@ namespace Jaunt.Behaviors
                 jumpNow = false;
                 if (controls.Jump)
                 {
-                    if (entity.OnGround || coyoteTimer > 0)
-                    {
-                        lastJumpMs = entity.World.ElapsedMilliseconds;
-                        jumpNow = true;
+                    if ((entity.OnGround || coyoteTimer > 0) 
+                    && ((entity.World.ElapsedMilliseconds - JauntlastJumpMs > baseJumpCooldown + (lastJumpCharge * JumpCooldownModifier)) 
+                    || smoothTurningOnGround))
+                    {    // entity.Api.Logger.Debug("JAUNT JUMP ACCEPTED");
+
+                        if (entity.AnimManager.ActiveAnimationsByAnimCode.TryGetValue("jump", out AnimationMetaData animMeta))
+                            {
+                                entity.AnimManager.ResetAnimation("jump"); 
+                                entity.AnimManager.AnimationsDirty = true;
+                            }              
+
+                            jumpCharge = 0;
+                            long now = entity.World.ElapsedMilliseconds;
+                            JauntlastJumpMs = now;
+                            lastJumpMs = now;
+                            currentJumpSpeed = baseJumpAnimSpeed;
+                            jumpNow = true; 
+                        
                     }
                     else if (CanFlyRidden && coyoteTimer < -0.15) // Re-use coyoteTimer as a free jump timer
                     {
                         eagent.Controls.IsFlying = true;
                     }
+                    else if (!entity.OnGround && variableJump)
+                    {    
+                        long timesincejump = entity.World.ElapsedMilliseconds - JauntlastJumpMs;   
+                        jumpCharge = timesincejump;
+                        if (jumpCharge > maxCharge){jumpCharge = maxCharge;}
+                    }
                 }
+                else jumpCharge = 0;
 
                 #endregion Jump Control
 
@@ -157,7 +201,7 @@ namespace Jaunt.Behaviors
                     eagent.Controls.Down = controls.Sneak && !controls.Jump && entity.Pos.Y > 0;
                     eagent.Controls.Up = controls.Jump && !controls.Sneak && entity.Pos.Y < entity.World.BlockAccessor.MapSizeY - 1;
 
-                    JauntGaitMeta currentJauntGait = ebg.CurrentGait as JauntGaitMeta;
+                //    JauntGaitMeta currentJauntGait = ebg.CurrentGait as JauntGaitMeta;
                     float verticalMoveSpeed = Math.Min(0.2f, dt) * controls.MovespeedMultiplier / 2;
                     ebjg.VerticalSpeed = verticalMoveSpeed * (eagent.Controls.Up ? currentJauntGait?.AscendSpeed ?? 1 : eagent.Controls.Down ? -(currentJauntGait?.DescendSpeed ?? 5) : 0);
                     var tryAnim = eagent.AnimManager.TryStartAnimation;
@@ -208,21 +252,31 @@ namespace Jaunt.Behaviors
 
     AnimationMetaData landingAnimation(string Name, float animSpeed, bool suppDefault)
         {
-            var anim = entity.Properties.Client.Animations.FirstOrDefault(a => a.Code == landAnimation);
-                if (anim == null)
-                {
-                    return null;
-                }
+            var anim = entity.Properties.Client.Animations.FirstOrDefault(a => a.Code == Name);
+            if (anim == null)
+            {
+                return null;
+            }
 
-                var result = anim.Clone();
-                result.AnimationSpeed = animSpeed;
-                result.SupressDefaultAnimation = suppDefault;
-                return result;
+            var result = anim.Clone();
+            result.AnimationSpeed = animSpeed;
+            result.SupressDefaultAnimation = suppDefault;
+            return result;
         }
 
         public void OnGaitChangedForEnvironment()
         {
             BehaviorGait_OnGaitChangedForEnvironment();
+        }
+
+        protected override void UpdateRidingState()
+        {
+            bool wasJumping = jumpNow;
+            base.UpdateRidingState();
+            if (wasJumping && customJump)
+            {
+                pendingCustomJump = true;
+            }
         }
 
           override protected void UpdateAngleAndMotion(float dt)
@@ -248,6 +302,28 @@ namespace Jaunt.Behaviors
             else
             {
                 base.UpdateAngleAndMotion(dt);
+            }
+
+            if (pendingCustomJump)
+            {
+                entity.Pos.Motion.Y = jumpStrength;
+                pendingCustomJump = false;
+            }
+            else if (jumpCharge != 0 && variableJump)
+            {
+           // entity.Api.Logger.Debug("PosMotionY: " + entity.Pos.Motion.Y.ToString("0.000") + " | jumpCharge: " + jumpCharge.ToString("0.000"));
+
+            if (jumpCharge < maxCharge)
+                {
+                    lastJumpCharge = jumpCharge;
+                    entity.Pos.Motion.Y = (1 - jumpCharge / (maxCharge * 4)) * jumpStrength;       
+                    if (entity.AnimManager.ActiveAnimationsByAnimCode.TryGetValue("jump", out AnimationMetaData animMeta))
+                    {
+                        float progress = (float)jumpCharge / (float)maxCharge;
+                        currentJumpSpeed = baseJumpAnimSpeed * (1f - (progress * maxJumpAnimSlowdown));
+                        animMeta.AnimationSpeed = currentJumpSpeed;
+                    }
+                }
             }
         }
 

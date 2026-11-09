@@ -61,6 +61,7 @@ namespace Jaunt.AiTasks
 		public override bool ShouldExecute()
 		{
 			if (entity.World.Side != EnumAppSide.Server) return false;
+            if (IsOnCooldown()) return false;
 			if (!PreconditionsSatisfied()) return false;
 			if (Flyer == null) return false;
 
